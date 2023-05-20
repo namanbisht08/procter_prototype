@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Video Streaming</title>
+    <script
+      src="https://cdn.socket.io/4.6.0/socket.io.min.js"
+      integrity="sha384-c79GN5VsunZvi+Q/WObgk2in0CbZsHnjEqvFxC5DxHn9lTfNce2WW6h2pH6u/kF+"
+      crossorigin="anonymous"
+    ></script>
+  </head>
+  <body>
+    <video id="videoElement" width="640" height="480" autoplay></video>
+    <h1 id="result"></h1>
+    <button id="startButton">Start</button>
+    <button id="pauseButton" disabled>Pause</button>
+    <button id="disconnectButton" disabled>Disconnect</button>
+
+    <script>
+      // Connect to the server
+      const socket = io.connect("http://localhost:3000");
+
+      // Get access to the webcam and stream the video
+      let stream;
+      let videoElement = document.getElementById("videoElement");
+      let sendFrames = false;
+      let canvas, context;
+      let intervalId;
+
+      navigator.mediaDevices
+        .getUserMedia({ video: true })
+        .then((str) => {
+          videoElement.srcObject = str;
+          stream = str;
+
+          // Create canvas and context
+          canvas = document.createElement("canvas");
+          context = canvas.getContext("2d");
+
+          // Start capturing frames when "Start" button is clicked
+          document
+            .getElementById("startButton")
+            .addEventListener("click", startCapture);
+          document
+            .getElementById("pauseButton")
+            .addEventListener("click", pauseCapture);
+          document
+            .getElementById("disconnectButton")
+            .addEventListener("click", disconnectSocket);
+        })
+        .catch((error) => {
+          console.error("Error accessing webcam:", error);
+        });
+
+      // Start capturing frames and sending them to the server
+      function startCapture() {
+        videoElement.play();
+        sendFrames = true;
+        intervalId = setInterval(captureFrame, 1000);
+
+        document.getElementById("startButton").disabled = true;
+        document.getElementById("pauseButton").disabled = false;
+        document.getElementById("disconnectButton").disabled = false;
+      }
+
+      // Capture frame and send it to the server
+      function captureFrame() {
+        context.drawImage(videoElement, 0, 0, canvas.width, canvas.height);
+        const frame = canvas.toDataURL("image/jpeg");
+        socket.emit("frame", frame);
+      }
+
+      // Pause capturing frames
+      function pauseCapture() {
+        videoElement.pause();
+        sendFrames = false;
+        clearInterval(intervalId);
+
+        document.getElementById("startButton").disabled = false;
+        document.getElementById("pauseButton").disabled = true;
+        document.getElementById("disconnectButton").disabled = false;
+      }
+
+      // Disconnect socket connection
+      function disconnectSocket() {
+        socket.disconnect();
+
+        document.getElementById("startButton").disabled = true;
+        document.getElementById("pauseButton").disabled = true;
+        document.getElementById("disconnectButton").disabled = true;
+      }
+
+      // Receive the ML model's output from the server
+      socket.on("result", (result) => {
+        console.log("Result:", result);
+        const resultElement = document.getElementById("result");
+
+        // Update the result text
+        if (result === 1) {
+          resultElement.innerText = "Drowsy";
+          resultElement.style.color = "red";
+        } else {
+          resultElement.innerText = "Not Drowsy";
+          resultElement.style.color = "green";
+        }
+      });
+
+      // Cleanup the stream when the page is closed or refreshed
+      window.addEventListener("beforeunload", () => {
+        if (stream) {
+          stream.getTracks().forEach((track) => {
+            track.stop();
+          });
+        }
+      });
+    </script>
+  </body>
+</html>

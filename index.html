@@ -11,6 +11,7 @@
   </head>
   <body>
     <video id="videoElement" width="640" height="480" autoplay></video>
+    <h1 id="result"></h1>
 
     <script>
       // Connect to the server
@@ -31,7 +32,7 @@
             context.drawImage(videoElement, 0, 0, canvas.width, canvas.height);
             const frame = canvas.toDataURL("image/jpeg");
             socket.emit("frame", frame);
-          }, 10000);
+          }, 100);
         })
         .catch((error) => {
           console.error("Error accessing webcam:", error);
