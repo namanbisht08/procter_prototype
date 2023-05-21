@@ -55,7 +55,7 @@
       function startCapture() {
         videoElement.play();
         sendFrames = true;
-        intervalId = setInterval(captureFrame, 1000);
+        intervalId = setInterval(captureFrame, 33);
 
         document.getElementById("startButton").disabled = true;
         document.getElementById("pauseButton").disabled = false;
